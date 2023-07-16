@@ -1,11 +1,30 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 class plateReader:
     def init(self):
         pass
-    
-    def maintain_image_size(self, image, width=None, height=None, inter=cv2.INTER_AREA):
+
+    def print(self, old_image, new_image, arg_a ='Imagem Original', arg_b ='Imagem Resultante'):
+        # Exibir a imagem original e a imagem equalizada ( equalização )
+        plt.subplot(1, 2, 1)
+        plt.imshow(old_image, cmap='gray')
+        plt.title(arg_a)
+        plt.subplot(1, 2, 2)
+        plt.imshow(new_image, cmap='gray')
+        plt.title(arg_b)
+        plt.show()
+
+    def region_colorizer(self, labels):
+        label_hue = np.uint8(255*labels/np.max(labels))
+        white_ch = 255*np.ones_like(label_hue)
+        color_image = cv2.merge([label_hue, white_ch, white_ch])
+        color_image = cv2.cvtColor(color_image, cv2.COLOR_HSV2BGR)
+        color_image[label_hue==0] = 0
+        return color_image
+
+    def resize_image(self, image, width=None, height=None, inter=cv2.INTER_AREA):
         dim = None
         (h, w) = image.shape[:2]
         if width is None and height is None:
@@ -19,20 +38,34 @@ class plateReader:
         return cv2.resize(image, dim, interpolation=inter)
 
     def segment_image(self, image):
-
-        #fechamento
+        # otimização 
+        image = cv2.GaussianBlur(image,(3,3),3)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
-        closing = cv2.morphologyEx(image,cv2.MORPH_CLOSE,kernel,iterations=2)
+        image = cv2.morphologyEx(image,cv2.MORPH_CLOSE,kernel,iterations=3)
 
-        return closing
+        # Binarizacao
+        _, image = cv2.threshold(image,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
-    def processa_img(self):
+        # Erosao
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(7,7))
+        image = cv2.erode(image,kernel)
+
+        # dilatacao
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(6,6)) 
+        image = cv2.dilate(image,kernel)
+
+        # extracao elementos conectados
+        connectivity = 4
+        (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(image , connectivity , cv2.CV_32S)
+        regioesColoridas = self.region_colorizer(labels)
+
+        return regioesColoridas
+
+    def process_image(self):
         image = cv2.imread("input/17.png")
 
         gray_image = cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
-        gray_image = self.maintain_image_size(gray_image, width=300)
-        image = self.segment_image(gray_image)
+        gray_image = self.resize_image(gray_image, width=300)
+        result = self.segment_image(gray_image)
 
-        cv2.imshow("Resultado",image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        self.print(gray_image, result)

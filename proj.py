@@ -3,4 +3,4 @@ import cv2
 import numpy as np
 
 app = plateReader()
-app.processa_img()
+app.process_image()
