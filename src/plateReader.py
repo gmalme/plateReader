@@ -9,6 +9,34 @@ class plateReader:
     def init(self):
         pass
 
+    def thickening_image(self, image):
+        # Verificar se a image é válida
+        if image is None:
+            print('image inválida.')
+            return None
+
+        # Converter a image para escala de cinza, se necessário
+        if len(image.shape) > 2:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Definir o kernel para a operação de dilatação
+        kernel = np.ones((5, 5), np.uint8)
+
+        # Aplicar a operação de dilatação
+        thickening = cv2.dilate(image, kernel, iterations=1)
+
+        return thickening
+
+    def fill(self,img):#https://github.com/thanhsn/opencv-filling-holes/blob/master/imfill.py
+        _, im_th = cv2.threshold(img, 220, 255, cv2.THRESH_BINARY_INV)
+        im_floodfill = im_th.copy()
+        h, w = im_th.shape[:2]
+        mask = np.zeros((h+2, w+2), np.uint8)
+        cv2.floodFill(im_floodfill, mask, (0,0), 255)
+        im_floodfill_inv = cv2.bitwise_not(im_floodfill)
+        a= im_th | im_floodfill_inv
+        return a
+
     def print(self, old_image, new_image, arg_a ='Imagem Original', arg_b ='Imagem Resultante'):
         # Exibir a imagem original e a imagem equalizada ( equalização )
         plt.subplot(1, 2, 1)
@@ -63,22 +91,26 @@ class plateReader:
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(6,6)) 
         image = cv2.dilate(image,kernel)
 
+        # thickening image
+        image = self.thickening_image(image)
+        image = cv2.erode(image,kernel)
+
         # extracao elementos conectados
         connectivity = 4
         (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(image , connectivity , cv2.CV_32S)
         regioesColoridas = self.region_colorizer(labels)
 
-        return regioesColoridas
+        return image
 
     def process_image(self):
         image = cv2.imread("input/17.png")
 
         image = self.resize_image(image, width=300)
-        gray_image = cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
-        segment_image = self.segment_image(gray_image)
+        image = cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
+        image = self.resize_image(image, width=300)
+        segment_image = self.segment_image(image)
 
         result = self.read_image(segment_image)
-        for palavra in result:
-            print(palavra)
+        print(result)
 
-        self.print(gray_image, segment_image)
+        self.print(image, segment_image)
