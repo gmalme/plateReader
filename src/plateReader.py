@@ -93,6 +93,7 @@ class plateReader:
 
         # thickening image
         image = self.thickening_image(image)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(4,4)) 
         image = cv2.erode(image,kernel)
 
         # extracao elementos conectados
@@ -100,7 +101,7 @@ class plateReader:
         (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(image , connectivity , cv2.CV_32S)
         regioesColoridas = self.region_colorizer(labels)
 
-        return image
+        return regioesColoridas
 
     def process_image(self):
         image = cv2.imread("input/17.png")
