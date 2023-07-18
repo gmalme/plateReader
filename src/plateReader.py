@@ -93,7 +93,7 @@ class plateReader:
 
         # thickening image
         image = self.thickening_image(image)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(4,4)) 
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3)) 
         image = cv2.erode(image,kernel)
 
         # extracao elementos conectados
