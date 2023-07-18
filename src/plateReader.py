@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import easyocr
+from PIL import Image
+import PIL
 
 class plateReader:
     def init(self):
@@ -37,6 +40,12 @@ class plateReader:
             dim = (width, int(h * r))
         return cv2.resize(image, dim, interpolation=inter)
 
+    def read_image(self, image):
+        reader = easyocr.Reader(['en'])
+        result = reader.readtext(image)
+        text = result[0][-2]
+        return text
+
     def segment_image(self, image):
         # otimização 
         image = cv2.GaussianBlur(image,(3,3),3)
@@ -64,8 +73,12 @@ class plateReader:
     def process_image(self):
         image = cv2.imread("input/17.png")
 
+        image = self.resize_image(image, width=300)
         gray_image = cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
-        gray_image = self.resize_image(gray_image, width=300)
-        result = self.segment_image(gray_image)
+        segment_image = self.segment_image(gray_image)
 
-        self.print(gray_image, result)
+        result = self.read_image(segment_image)
+        for palavra in result:
+            print(palavra)
+
+        self.print(gray_image, segment_image)
