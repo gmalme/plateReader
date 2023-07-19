@@ -18,8 +18,7 @@ class plateReader:
 
         return thickening
 
-    def filter_by_area(self, image, threshold):
-        numLabels, labels, stats, centroids = cv2.connectedComponentsWithStats(image, connectivity=8, ltype=cv2.CV_32S)
+    def filter_by_area(self, image, threshold, labels, stats):
         areas = stats[1:, cv2.CC_STAT_AREA]
         mean_area = np.mean(areas)
         filtered_labels = np.where(stats[1:, cv2.CC_STAT_AREA] >= threshold)[0] + 1 
@@ -77,21 +76,24 @@ class plateReader:
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(7,7))
         image = cv2.erode(image,kernel)
 
-        # dilatacao
+        # Dilatacao
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(6,6)) 
         image = cv2.dilate(image,kernel)
 
-        # thickening image
+        # Thickening
         image = self.thickening(image)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3)) 
         image = cv2.erode(image,kernel)
 
-        threshold = 120  # Ajuste esse valor conforme necessário
-        image, _ = self.filter_by_area(image, threshold)
-
-        # extracao elementos conectados
+        # Extracao elementos conectados
         connectivity = 4
-        (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(image , connectivity , cv2.CV_32S)
+        _, labels, stats, _ = cv2.connectedComponentsWithStats(image , connectivity , cv2.CV_32S)
+
+        # Filtro por area dos objetos
+        threshold = 120 
+        image, _ = self.filter_by_area(image, threshold, labels, stats)
+
+        # segmenta imagem por cores
         regioesColoridas = self.region_colorizer(labels)
 
         return regioesColoridas
