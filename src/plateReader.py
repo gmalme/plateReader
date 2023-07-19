@@ -9,49 +9,23 @@ class plateReader:
     def init(self):
         pass
 
-    def thickening_image(self, image):
-        # Verificar se a image é válida
-        if image is None:
-            print('image inválida.')
-            return None
-
-        # Converter a image para escala de cinza, se necessário
+    def thickening(self, image):
         if len(image.shape) > 2:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # Definir o kernel para a operação de dilatação
         kernel = np.ones((5, 5), np.uint8)
-
-        # Aplicar a operação de dilatação
         thickening = cv2.dilate(image, kernel, iterations=1)
 
         return thickening
 
-    def filter_components_by_area(self, image, threshold):
-        # Aplicar a função connectedComponentsWithStats
+    def filter_by_area(self, image, threshold):
         numLabels, labels, stats, centroids = cv2.connectedComponentsWithStats(image, connectivity=8, ltype=cv2.CV_32S)
-
-        # Calcular a média das áreas dos componentes
-        areas = stats[1:, cv2.CC_STAT_AREA]  # Ignorar o componente de fundo
+        areas = stats[1:, cv2.CC_STAT_AREA]
         mean_area = np.mean(areas)
-
-        # Filtrar componentes com área abaixo do threshold
-        filtered_labels = np.where(stats[1:, cv2.CC_STAT_AREA] >= threshold)[0] + 1  # Adicionar 1 para corresponder aos rótulos corretos
-
-        # Criar uma imagem filtrada com base nos componentes selecionados
+        filtered_labels = np.where(stats[1:, cv2.CC_STAT_AREA] >= threshold)[0] + 1 
         filtered_image = np.isin(labels, filtered_labels).astype(np.uint8) * 255
 
         return filtered_image, mean_area
-
-    def fill(self,img):#https://github.com/thanhsn/opencv-filling-holes/blob/master/imfill.py
-        _, im_th = cv2.threshold(img, 220, 255, cv2.THRESH_BINARY_INV)
-        im_floodfill = im_th.copy()
-        h, w = im_th.shape[:2]
-        mask = np.zeros((h+2, w+2), np.uint8)
-        cv2.floodFill(im_floodfill, mask, (0,0), 255)
-        im_floodfill_inv = cv2.bitwise_not(im_floodfill)
-        a= im_th | im_floodfill_inv
-        return a
 
     def print(self, old_image, new_image, arg_a ='Imagem Original', arg_b ='Imagem Resultante'):
         # Exibir a imagem original e a imagem equalizada ( equalização )
@@ -64,11 +38,11 @@ class plateReader:
         plt.show()
 
     def region_colorizer(self, labels):
-        label_hue = np.uint8(255*labels/np.max(labels))
-        white_ch = 255*np.ones_like(label_hue)
-        color_image = cv2.merge([label_hue, white_ch, white_ch])
+        color_labels = np.uint8(255*labels/np.max(labels))
+        white_labels = 255*np.ones_like(color_labels)
+        color_image = cv2.merge([color_labels, white_labels, white_labels])
         color_image = cv2.cvtColor(color_image, cv2.COLOR_HSV2BGR)
-        color_image[label_hue==0] = 0
+        color_image[color_labels==0] = 0
         return color_image
 
     def resize_image(self, image, width=None, height=None, inter=cv2.INTER_AREA):
@@ -108,17 +82,12 @@ class plateReader:
         image = cv2.dilate(image,kernel)
 
         # thickening image
-        image = self.thickening_image(image)
+        image = self.thickening(image)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3)) 
         image = cv2.erode(image,kernel)
 
         threshold = 120  # Ajuste esse valor conforme necessário
-        image, _ = self.filter_components_by_area(image, threshold)
-
-        # Exibir a imagem filtrada
-        cv2.imshow('Imagem Filtrada', image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        image, _ = self.filter_by_area(image, threshold)
 
         # extracao elementos conectados
         connectivity = 4
@@ -129,7 +98,6 @@ class plateReader:
 
     def process_image(self):
         image = cv2.imread("input/9.png")
-
         image = self.resize_image(image, width=300)
         image = cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
         image = self.resize_image(image, width=300)
